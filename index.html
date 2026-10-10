@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+U:wght@100..900&family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+  <title>タイムスタンプ整形器</title>
+  <style>
+    *{
+      font-family:"Mochiy Pop One"
+    }
+    .Main{
+      padding:6px;
+    }
+    body{
+      background-color:#63AED9;
+      color:#FFC547;
+      margin:0px;
+      min-height:100vh;
+      padding-right:0px;
+    }
+    .header {
+      font-size:20px;
+      background-color:#FFC547;
+      font-weight:normal;
+      padding:0;
+      margin:0;
+      position:sticky;
+      top:0px;
+      left:0px;
+      width:100%;
+    }
+    .header2 {
+      display:flex;
+      align-items:center;
+    }
+    h1 {
+      margin:0;
+      color:#63AED9;
+      padding-left:10px;
+    }
+    h1, h3{
+      font-weight:normal;
+    }
+    button{
+      background-color:#FFC547;
+      color:#63AED9;
+      border:1px solid #FFF;
+      border-radius:3px;
+    }
+    textarea{
+      min-width:98%;
+      max-width:98%;
+      field-sizing:content;
+      font-size:14px;
+      font-family:"M PLUS U", sans-serif;
+      min-height:100px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+      <div class="header2">
+        <h1>タイムスタンプ整形機</h1>
+        <p class="Version" id="Version"></p>
+      </div>
+    </div>
+  <div class="Main">
+    <p>
+      入力されたテキストを時間と内容に分割し、YouTubeのコメントに使用できるタイムスタンプに変形します。<br>
+      <span style="color:red">"総経過秒数:内容"</span>の形で入力してください。<br>
+      総経過秒数が少数や負の数、文字が入っていたり、内容がない、コロンがない、などの行はエラーとなります。<br>
+      また、空行もエラーとして処理リマス。
+    </p>
+    <button id="InsertSample">サンプルテキストを挿入</button><button style="margin-left:4px" id="Clean">入力と出力をクリア</button>
+    <h3>整形前テキスト</h3>
+    <textarea id="InputText"></textarea>
+    <button id="Do">変換する</button>
+    <h3>整形後タイムスタンプ</h3>
+    <textarea readonly id="OutputText"></textarea>
+    <button id="Copy">タイムスタンプのみをコピー</button><button style="margin-left:4px" id="AllCopy">全出力をコピー</button>
+  </div>
+  <script>
+    //v3.6.0
+    //2.0.0_HTMLと連携する前提に変更。
+    //2.1.3_console出力をdebugレベルにし、CookedArrayをlet宣言ではなくconst宣言にした
+    //2.1.4_Transformerのconsoleがlogのまま未変更だったので修正
+    //2.1.5_BubbleSorterを定義した
+    //2.1.6_BubbleSorterが完全にデッドコードだったので修正
+    //2.1.7_BubbleSorterの中で未定義の配列を参照していた問題を修正
+    //2.1.8_そもそもreturnがないとかいう問題を修正
+    //2.2.0_正式実装
+    //2.2.1_エラーメッセージのテストを実装
+    //2.2.2_それのバグを一旦修正
+    //2.2.3_変なタイプミスと、判定式の書き順を変更。空をスプリットしても空なんだよｵｫｫｫｵｫｫｫ。
+    //2.2.4_メッセージの種類を追加
+    //2.2.5_安定動作した
+    //2.2.6_コロンのみが打ち込まれているときのエラー文を設定
+    //2.2.7_ エラーがない場合はその旨を表示
+    //2.3.0_一旦安定動作を確認
+    //2.3.1_内容がスペースのみだった場合にエラー判定がされない問題を修正
+    //2.4.0_デバッグ表示を実装し、エラー表示を本実装。BubbleSorterのやっていることはバブルソートではないのでただのSorterに。(というかJS固有のsortでも良いんだけど、やっていることはこっちのほうがわかりやすい貴ガス)
+    //3.0.0_やっぱりJSファイルを内蔵し、バージョニングを統一した。メジャーバージョン3にしたの初めてだぞ。
+    //3.0.1_コロンがない場合のエラーメッセージをわかりやすいように修正。
+    //3.0.2_エラーが起きたときに明示的に知らせるように変更
+    //3.0.3_プレースホルダーだったサンプルテキスト挿入ボタンに関数を対応。ついでに、内容をすべてクリアする関数も設計した。
+    //3.0.4_クリア関数がデッドコードクソ
+    //3.1.0_サンプルボタンとクリアボタンの動作は安定した
+    //3.1.1_エラーがないとき、「エラー情報」を表示するのをやめた。
+    //3.1.2_メインとなる関数の名前をWorkerLorderからStarterへ変更。
+    //3.2.0_Sorterの処理を、JS標準の.sortに変更。コードは簡潔に。
+    //3.3.0_コピーボタンを実装
+    //3.3.1_コピーにtry/catchを追加
+    //3.3.2_try/catchがなんかおかしいらしい(AIによれば)ので、非同期処理に変更。
+    //3.3.3_コピーを押されたとき、何もないことを訴えるalertを実行するよう変更。これはスマホでのパフォーマンスは落ちるだろうねェ
+    //3.4.0_何も入力されていないときに変換ボタンを押したときにalertを発動。
+    //3.5.0_CSSを書いた。textarea要素の横幅と縦幅、フォントサイズを最適化。
+    //3.5.1_CSSの最小幅も指定したほうが良さそうだと思ったのでそうした。
+    //3.6.0_説明分書き換え
+    let ErrorLine = []
+    let Out = ""
+    let AllOut = ""
+    function Cooker(Ingredient){
+      ErrorLine = []
+      const CookedArray = []
+      const RawLength = Ingredient.length
+      for(let x = 0; x < RawLength; x++){
+        let ErrStat = false
+        const Line = Ingredient[x]
+        const LineSplited = Line.split(":")
+        if(LineSplited.length >= 3){
+          for(let y = 2; y < LineSplited.length; y++){
+            LineSplited[1] = LineSplited[1] + ":" + LineSplited[y]
+          }
+        }
+        if(Line === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行は空行です。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Line === ":"){
+          const ErrObj = {Line:String(x + 1),Reason:"行にはコロンのみが打ち込まれており、時間も内容も含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[1] === undefined){
+          const ErrObj = {Line:String(x + 1),Reason:"行に内容の文字が定義されていません。(コロンがありません)"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[0].trim() === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行には総経過秒数が含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(isNaN(LineSplited[0]) === true){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する要素は、数値である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(!Number.isInteger(Number(LineSplited[0]))){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、整数である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Number(LineSplited[0]) > 43200){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、43200秒以下である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Number(LineSplited[0]) < 0 ){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、0以上である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[1].trim() === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行には内容の文字が含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        if(ErrStat === true){
+          continue
+        }
+        const LineTime = LineSplited[0]
+        const LineDescription = LineSplited[1]
+        const Obj = {time:LineTime, Description:LineDescription}
+        CookedArray.push(Obj)
+      }
+      console.debug(CookedArray)
+      console.debug(ErrorLine)
+      return CookedArray
+    }
+    function Sorter(Cooked){
+      Cooked.sort((a, b) => Number(a.time) - Number(b.time))
+      return Cooked
+    }
+    function Transformer(Input){
+      let OutputText = "=====簡易タイムスタンプ=====\n"
+      const ArrayLength = Input.length
+      for(let x = 0; x < ArrayLength; x++){
+        const ThisTime = Number(Input[x].time)
+        const Description = Input[x].Description
+        const TimeSec = String(ThisTime % 60).padStart(2,'0')
+        const TimeMin = String(Math.floor(ThisTime / 60) % 60).padStart(2,'0')
+        const TimeHou = String(Math.floor(Math.floor(ThisTime / 60) / 60)).padStart(2,'0')
+        const TimeString = `${TimeHou}:${TimeMin}:${TimeSec}  ${Description}\n`
+        OutputText = OutputText + TimeString
+      }
+      console.debug(OutputText)
+      return OutputText
+    }
+    function TSErrRender(){
+      let ErrArrTransformed = "\n/*エラー・情報*/\n"
+      if(ErrorLine.length === 0){
+        ErrArrTransformed = ""
+      }
+      else{
+        for(let x = 0; x < ErrorLine.length; x++){
+          ErrArrTransformed = ErrArrTransformed + `Error at Line ${ErrorLine[x].Line}:${ErrorLine[x].Reason}\n`
+        }
+        alert("エラーを検出しました。出力の末尾に詳細を表記します。")
+      }
+      console.debug(ErrArrTransformed)
+      return ErrArrTransformed
+    }
+    function Starter(){
+      const ST = performance.now()
+      const ToTransformRaw = document.getElementById("InputText").value
+      if(ToTransformRaw.trim() === ""){
+        alert("何も入力されていません。")
+      }
+      else{
+        const ToTransform = ToTransformRaw.split(/\r?\n/)
+        console.debug(ToTransform)
+        const Transformed =  Transformer(Sorter(Cooker(ToTransform)))
+        Out = Transformed
+        const ErrTransformed = TSErrRender()
+        const OutputText = Transformed + ErrTransformed
+        AllOut = OutputText
+        document.getElementById("OutputText").value = OutputText
+      }
+      const ED = performance.now()
+      const PerformDiff = ED - ST
+      console.debug(`処理実行時間:${PerformDiff.toFixed(3)}ms`)
+    }
+    function SampleInsrter(){
+      document.getElementById("InputText").value = "-1:負の数(範囲外(小))\n0.1:少数\n43201:範囲外(大)\nNanatama:時間部が文字\n43200:正しい例\n0:順番違いの例\n619:複数の:コロンを:含む要素\n424.000:小数点以下はすべて0なら透\n:\n0x10:こういう書き方もできる(16進数)\n1e4:こういう(ry\n文字だけコロンなし\n424:\n:時間がない\n"
+    }
+    function AreaCleaner(){
+      const a = confirm("本当にクリアしますか？")
+      if(a === true){
+        document.getElementById("InputText").value = ""
+        document.getElementById("OutputText").value = ""
+        Out = ""
+        AllOut = ""
+      }
+    }
+    async function Cliper(){
+      if(Out !== ""){
+        try{
+          await navigator.clipboard.writeText(Out)
+          alert("コピーに成功しました。")
+        }
+        catch(error){
+          console.debug(error)
+          alert("コピーに失敗しました。理由：不明")
+        }
+      }
+      else{
+        alert("現在、出力には何もありません。")
+      }
+    }
+    async function AllCliper(){
+      if(AllOut !== ""){
+        try{
+          await navigator.clipboard.writeText(AllOut)
+          alert("コピーに成功しました。")
+        }
+        catch(error){
+          console.debug(error)
+          alert("コピーに失敗しました。理由：不明")
+        }
+      }
+      else{
+        alert("現在、出力には何もありません。")
+      }
+    }
+    document.getElementById("Do").addEventListener("click", Starter)
+    document.getElementById("InsertSample").addEventListener("click", SampleInsrter)
+    document.getElementById("Clean").addEventListener("click", AreaCleaner)
+    document.getElementById("Copy").addEventListener("click", Cliper)
+    document.getElementById("AllCopy").addEventListener("click", AllCliper)
+  </script>
+</body>
+</html>
