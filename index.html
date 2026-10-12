@@ -74,7 +74,7 @@
       総経過秒数が少数や負の数、文字が入っていたり、内容がない、コロンがない、などの行はエラーとなります。<br>
       また、空行もエラーとして処理リマス。
     </p>
-    <button id="InsertSample">サンプルテキストを挿入</button><button style="margin-left:4px" id="Clean">入力と出力をクリア</button>
+    <button id="InsertSample">サンプルテキストを使用</button><button style="margin-left:4px" id="Clean">入力と出力をクリア</button>
     <h3>整形前テキスト</h3>
     <textarea id="InputText"></textarea>
     <button id="Do">変換する</button>
@@ -246,7 +246,10 @@
       console.debug(`処理実行時間:${PerformDiff.toFixed(3)}ms`)
     }
     function SampleInsrter(){
-      document.getElementById("InputText").value = "-1:負の数(範囲外(小))\n0.1:少数\n43201:範囲外(大)\nNanatama:時間部が文字\n43200:正しい例\n0:順番違いの例\n619:複数の:コロンを:含む要素\n424.000:小数点以下はすべて0なら透\n:\n0x10:こういう書き方もできる(16進数)\n1e4:こういう(ry\n文字だけコロンなし\n424:\n:時間がない\n"
+      const a = confirm("サンプルテキストで置き換えます。よろしいですか。")
+      if(a === true){
+        document.getElementById("InputText").value = "-1:負の数(範囲外(小))\n0.1:少数\n43201:範囲外(大)\nNanatama:時間部が文字\n43200:正しい例\n0:順番違いの例\n619:複数の:コロンを:含む要素\n424.000:小数点以下はすべて0なら透\n:\n0x10:こういう書き方もできる(16進数)\n1e4:こういう(ry\n文字だけコロンなし\n424:\n:時間がない\n"
+      }
     }
     function AreaCleaner(){
       const a = confirm("本当にクリアしますか？")
