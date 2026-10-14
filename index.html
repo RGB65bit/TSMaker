@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+U:wght@100..900&family=Mochiy+Pop+One&family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+  <title>タイムスタンプ整形機</title>
+  <style>
+    *{
+      font-family:"Mochiy Pop One"
+    }
+    .Main{
+      padding:6px;
+    }
+    body{
+      background-color:#63AED9;
+      color:#FFC547;
+      margin:0px;
+      min-height:100vh;
+      padding-right:0px;
+    }
+    .header {
+      font-size:20px;
+      background-color:#FFC547;
+      color:#63AED9;
+      font-weight:normal;
+      padding:0;
+      margin:0;
+      position:sticky;
+      top:0px;
+      left:0px;
+      width:100%;
+    }
+    .header2 {
+      display:flex;
+      align-items:center;
+    }
+    h1 {
+      margin:0;
+      color:#63AED9;
+      padding-left:10px;
+    }
+    h1, h3{
+      font-weight:normal;
+    }
+    button{
+      background-color:#FFC547;
+      color:#63AED9;
+      border:1px solid #FFF;
+      border-radius:3px;
+      padding:6px;
+    }
+    button:hover{
+      cursor:pointer;
+    }
+    textarea{
+      min-width:98%;
+      max-width:98%;
+      field-sizing:content;
+      font-size:14px;
+      font-family:"M PLUS U", sans-serif;
+      min-height:100px;
+    }
+    dialog{
+      border-radius:10px;
+    }
+    .DiaCancel{
+      color:#63AED9;
+      background-color:rgb(250,250,250);
+    }
+    dialog, dialog > button{
+      border:#63AED9 2px solid;
+      box-shadow:2px 2px 0px rgba(0, 0, 0, 0.25);
+    }
+    dialog > button:hover{
+      color:#000000}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header2">
+      <h1>タイムスタンプ整形機</h1>
+      <p class="Version" id="Version"></p>
+    </div>
+  </div>
+
+  <dialog id="CopyDia">
+    <p>コピー成功！</p>
+    <button id="CopyDia1">OK！</button>
+  </dialog>
+
+  <dialog id="InsSampleDia">
+    <p>サンプルテキストで置きかえます。よろしいですか。</p>
+    <button id="InsSampleDia1" class="DiaOK">置き換える！</button>
+    <button id="InsSampleDia2" class="DiaCancel" autofocus>やっぱりやめる</button>
+  </dialog>
+
+  <dialog id="CopyDiaFail">
+    <p>何かしらの理由で<br>コピーに失敗しました。</p>
+    <button id="CopyDia1Fail" class="DiaOK">わかった！</button>
+  </dialog>
+
+  <dialog id="CopyDiaNone">
+    <p>現在、出力には何もありません。</p>
+    <button id="CopyDia1None" class="DiaOK">何かを打つ！</button>
+  </dialog>
+
+  <dialog id="ClearDia">
+    <p>本当にクリアしますか？</p>
+    <button id="ClearDia1" class="DiaOK">クリアする！</button>
+    <button id="ClearDia2" class="DiaCancel" autofocus>やっぱりやめる</button>
+  </dialog>
+
+  <dialog id="ErrDia">
+    <p>エラーを検出しました。<br>出力の末尾に詳細を表記します。</p>
+    <button id="ErrDia1" class="DiaOK">わかった！</button>
+  </dialog>
+
+  <dialog id="InputNoneDia">
+    <p>何も入力されていません。</p>
+    <button id="InputNoneDia1" class="DiaOK">何かを打つ！</button>
+  </dialog>
+  <div class="Main">
+    <p>
+      入力されたテキストを時間と内容に分割し、YouTubeのコメントに使用できるタイムスタンプに変形します。<br>
+      <span style="color:red">"総経過秒数:内容"</span>の形で入力してください。<br>
+      総経過秒数が少数や負の数、文字が入っていたり、内容がない、コロンがない、などの行はエラーとなります。<br>
+      また、空行もエラーとして処理リマス。
+    </p>
+    <button id="InsertSample">サンプルテキストを使用</button><button style="margin-left:4px" id="Clean">入力と出力をクリア</button>
+    <h3>整形前テキスト</h3>
+    <textarea id="InputText"></textarea>
+    <button id="Do">変換する</button>
+    <h3>整形後タイムスタンプ</h3>
+    <textarea readonly id="OutputText"></textarea>
+    <button id="Copy">タイムスタンプのみをコピー</button><button style="margin-left:4px" id="AllCopy">全出力をコピー</button>
+  </div>
+  <script>
+    const UpdateLog =[
+      {
+      date:null,
+      ver:"1.0.0",
+      desc:"完成"
+      },{
+      date:null,
+      ver:"2.0.0",
+      desc:"HTMLと連携する前提に変更。"
+      },{
+      date:null,
+      ver:"2.1.3",
+      desc:"console出力をdebugレベルにし、CookedArrayをlet宣言ではなくconst宣言にした"
+      },{
+      date:null,
+      ver:"2.1.4",
+      desc:"Transformerのconsoleがlogのまま未変更だったので修正"
+      },{
+      date:null,
+      ver:"2.1.5",
+      desc:"BubbleSorterを定義した"
+      },{
+      date:null,
+      ver:"2.1.6",
+      desc:"BubbleSorterが完全にデッドコードだったので修正"
+      },{
+      date:null,
+      ver:"2.1.7",
+      desc:"BubbleSorterの中で未定義の配列を参照していた問題を修正"
+      },{
+      date:null,
+      ver:"2.1.8",
+      desc:"そもそもreturnがないとかいう問題を修正"
+      },{
+      date:null,
+      ver:"2.2.0",
+      desc:"正式実装"
+      },{
+      date:null,
+      ver:"2.2.1",
+      desc:"エラーメッセージのテストを実装"
+      },{
+      date:null,
+      ver:"2.2.2",
+      desc:"それのバグを一旦修正"
+      },{
+      date:null,
+      ver:"2.2.3",
+      desc:"変なタイプミスと、判定式の書き順を変更。空をスプリットしても空なんだよｵｫｫｫｵｫｫｫ。"
+      },{
+      date:null,
+      ver:"2.2.4",
+      desc:"メッセージの種類を追加"
+      },{
+      date:null,
+      ver:"2.2.5",
+      desc:"安定動作した"
+      },{
+      date:null,
+      ver:"2.2.6",
+      desc:"コロンのみが打ち込まれているときのエラー文を設定"
+      },{
+      date:null,
+      ver:"2.2.7",
+      desc:"エラーがない場合はその旨を表示"
+      },{
+      date:null,
+      ver:"2.3.0",
+      desc:"一旦安定動作を確認"
+      },{
+      date:null,
+      ver:"2.3.1",
+      desc:"内容がスペースのみだった場合にエラー判定がされない問題を修正"
+      },{
+      date:null,
+      ver:"2.4.0",
+      desc:"デバッグ表示を実装し、エラー表示を本実装。BubbleSorterのやっていることはバブルソートではないのでただのSorterに。(というかJS固有のsortでも良いんだけど、やっていることはこっちのほうがわかりやすい貴ガス)"
+      },{
+      date:null,
+      ver:"3.0.0",
+      desc:"やっぱりJSファイルを内蔵し、バージョニングを統一した。メジャーバージョン3にしたの初めてだぞ。"
+      },{
+      date:null,
+      ver:"3.0.1",
+      desc:"コロンがない場合のエラーメッセージをわかりやすいように修正。"
+      },{
+      date:null,
+      ver:"3.0.2",
+      desc:"エラーが起きたときに明示的に知らせるように変更"
+      },{
+      date:null,
+      ver:"3.0.3",
+      desc:"プレースホルダーだったサンプルテキスト挿入ボタンに関数を対応。ついでに、内容をすべてクリアする関数も設計した。"
+      },{
+      date:null,
+      ver:"3.0.4",
+      desc:"クリア関数がデッドコードクソ"
+      },{
+      date:null,
+      ver:"3.1.0",
+      desc:"サンプルボタンとクリアボタンの動作は安定した"
+      },{
+      date:null,
+      ver:"3.1.1",
+      desc:"エラーがないとき、「エラー情報」を表示するのをやめた。"
+      },{
+      date:null,
+      ver:"3.1.2",
+      desc:"メインとなる関数の名前をWorkerLorderからStarterへ変更。"
+      },{
+      date:null,
+      ver:"3.2.0",
+      desc:"Sorterの処理を、JS標準の.sortに変更。コードは簡潔に。"
+      },{
+      date:null,
+      ver:"3.3.0",
+      desc:"コピーボタンを実装"
+      },{
+      date:null,
+      ver:"3.3.1",
+      desc:"コピーにtry/catchを追加"
+      },{
+      date:null,
+      ver:"3.3.2",
+      desc:"try/catchがなんかおかしいらしい(AIによれば)ので、非同期処理に変更。"
+      },{
+      date:null,
+      ver:"3.3.3",
+      desc:"コピーを押されたとき、何もないことを訴えるalertを実行するよう変更。これはスマホでのパフォーマンスは落ちるだろうねェ"
+      },{
+      date:null,
+      ver:"3.4.0",
+      desc:"何も入力されていないときに変換ボタンを押したときにalertを発動。"
+      },{
+      date:null,
+      ver:"3.5.0",
+      desc:"CSSを書いた。textarea要素の横幅と縦幅、フォントサイズを最適化。"
+      },{
+      date:null,
+      ver:"3.5.1",
+      desc:"CSSの最小幅も指定したほうが良さそうだと思ったのでそうした。"
+      },{
+      date:null,
+      ver:"3.6.0",
+      desc:"説明分書き換え"
+      },{
+      date:null,
+      ver:"3.6.1",
+      desc:"サンプルテキストで置き換えるときに確認を表示するように変更"
+      },{
+      date:null,
+      ver:"3.7.0",
+      desc:"配列書いた"
+      },{
+      date:null,
+      ver:"3.7.1",
+      desc:"更新履歴の配列のバージョン表記を修正し、コメントのログを整形した"
+      },{
+      date:202610131354,
+      ver:"3.7.2",
+      desc:"配列から最新バージョンを取得し、HTMLに反映する関数を追加"
+      },{
+      date:202610131401,
+      ver:"3.8.0",
+      desc:"そもそも関数を呼んでいないとかいうバグを直し、配列によるバージョン標記システムを本実装した。"
+      },{
+      date:202610131722,
+      ver:"3.9.0",
+      desc:"confirmとかalertを試験的にdialogに変更。ただその前のバックアップはないのでフェイルオーバー・フェイルバックは不可～～～foooooooooo"
+      },{
+      date:202610141602,
+      ver:"3.9.1",
+      desc:"ダイアログを開いてそのままEnterを押すと、実行側のボタンが実行されていたので、autofocusでデフォルトではキャンセルになるようにした"
+      },{
+      date:202610141636,
+      ver:"3.9.2",
+      desc:"どっちが選択されているかはっきりしなかったので、選択されているほうの文字色を黒くするようにした"
+      }
+    ]
+    let ErrorLine = []
+    let Out = ""
+    let AllOut = ""
+    //行ごとの入力を解析、エラー行を行数・理由を共にしてエラー配列へ。それ以外を、時間:内容の形式のオブジェクトに修正しreturnする
+    function Cooker(Ingredient){
+      ErrorLine = []
+      const CookedArray = []
+      const RawLength = Ingredient.length
+      for(let x = 0; x < RawLength; x++){
+        let ErrStat = false
+        const Line = Ingredient[x]
+        const LineSplited = Line.split(":")
+        if(LineSplited.length >= 3){
+          for(let y = 2; y < LineSplited.length; y++){
+            LineSplited[1] = LineSplited[1] + ":" + LineSplited[y]
+          }
+        }
+        if(Line === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行は空行です。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Line === ":"){
+          const ErrObj = {Line:String(x + 1),Reason:"行にはコロンのみが打ち込まれており、時間も内容も含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[1] === undefined){
+          const ErrObj = {Line:String(x + 1),Reason:"行に内容の文字が定義されていません。(コロンがありません)"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[0].trim() === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行には総経過秒数が含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(isNaN(LineSplited[0]) === true){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する要素は、数値である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(!Number.isInteger(Number(LineSplited[0]))){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、整数である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Number(LineSplited[0]) > 43200){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、43200秒以下である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(Number(LineSplited[0]) < 0 ){
+          const ErrObj = {Line:String(x + 1),Reason:"総経過秒数に指定する数値は、0以上である必要があります。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        else if(LineSplited[1].trim() === ""){
+          const ErrObj = {Line:String(x + 1),Reason:"行には内容の文字が含まれていません。"}
+          ErrorLine.push(ErrObj)
+          ErrStat = true
+        }
+        if(ErrStat === true){
+          continue
+        }
+        const LineTime = LineSplited[0]
+        const LineDescription = LineSplited[1]
+        const Obj = {time:LineTime, Description:LineDescription}
+        CookedArray.push(Obj)
+      }
+      console.debug(CookedArray)
+      console.debug(ErrorLine)
+      return CookedArray
+    }
+    //引数の配列に、順序の違うものがあれば早いものを前(昇順)に入れ替えreturn
+    function Sorter(Cooked){
+      Cooked.sort((a, b) => Number(a.time) - Number(b.time))
+      return Cooked
+    }
+    //引数の配列をもとに、形式を「HH:MM:SS  内容」に変形しreturn。
+    function Transformer(Input){
+      let OutputText = "=====簡易タイムスタンプ=====\n"
+      const ArrayLength = Input.length
+      for(let x = 0; x < ArrayLength; x++){
+        const ThisTime = Number(Input[x].time)
+        const Description = Input[x].Description
+        const TimeSec = String(ThisTime % 60).padStart(2,'0')
+        const TimeMin = String(Math.floor(ThisTime / 60) % 60).padStart(2,'0')
+        const TimeHou = String(Math.floor(Math.floor(ThisTime / 60) / 60)).padStart(2,'0')
+        const TimeString = `${TimeHou}:${TimeMin}:${TimeSec}  ${Description}\n`
+        OutputText = OutputText + TimeString
+      }
+      console.debug(OutputText)
+      return OutputText
+    }
+    //Cookerのエラー情報をもとに、`Error at Line X ${理由}`の形式に変形しreturn。エラーがないのなら、内容を空文字にする。
+    function TSErrRender(){
+      let ErrArrTransformed = "\n/*エラー・情報*/\n"
+      if(ErrorLine.length === 0){
+        ErrArrTransformed = ""
+      }
+      else{
+        for(let x = 0; x < ErrorLine.length; x++){
+          ErrArrTransformed = ErrArrTransformed + `Error at Line ${ErrorLine[x].Line}:${ErrorLine[x].Reason}\n`
+        }
+        DisplayErrDia()
+      }
+      console.debug(ErrArrTransformed)
+      return ErrArrTransformed
+    }
+    //入力を行ごとに分割し、処理系統を呼び出し、結果を出力する関数
+    function Starter(){
+      const ST = performance.now()
+      const ToTransformRaw = document.getElementById("InputText").value
+      if(ToTransformRaw.trim() === ""){
+        DisplayInputNoneDia()
+      }
+      else{
+        const ToTransform = ToTransformRaw.split(/\r?\n/)
+        console.debug(ToTransform)
+        const Transformed =  Transformer(Sorter(Cooker(ToTransform)))
+        Out = Transformed
+        const ErrTransformed = TSErrRender()
+        const OutputText = Transformed + ErrTransformed
+        AllOut = OutputText
+        document.getElementById("OutputText").value = OutputText
+      }
+      const ED = performance.now()
+      const PerformDiff = ED - ST
+      console.debug(`処理実行時間:${PerformDiff.toFixed(3)}ms`)
+    }
+    //サンプル置き換えダイアログの実行ボタンと連携し、サンプルテキストを挿入する関数
+    function SampleInsrter(){
+        document.getElementById("InputText").value = "-1:負の数(範囲外(小))\n0.1:少数\n43201:範囲外(大)\nNanatama:時間部が文字\n43200:正しい例\n0:順番違いの例\n619:複数の:コロンを:含む要素\n424.000:小数点以下はすべて0なら透\n:\n0x10:こういう書き方もできる(16進数)\n1e4:こういう(ry\n文字だけコロンなし\n424:\n:時間がない\n"
+    }
+    //全削除ダイアログの実行ボタンと連携し、全出力とコピー用変数を初期化する関数
+    function AreaCleaner(){
+      document.getElementById("InputText").value = ""
+      document.getElementById("OutputText").value = ""
+      Out = ""
+      AllOut = ""
+    }
+    //コピー確認ダイアログの実行ボタンと連携し、クリップボードにコピーを行う関数
+    async function Cliper(){
+      if(Out !== ""){
+        try{
+          await navigator.clipboard.writeText(Out)
+          DisplayCopyDia()
+        }
+        catch(error){
+          console.debug(error)
+          DisplayCopyDiaFail()
+        }
+      }
+      else{
+        DisplayCopyDiaNone()
+      }
+    }
+    //全コピー確認ダイアログの実行ボタンと連携し、クリップボードにコピーを行う関数
+    async function AllCliper(){
+      if(AllOut !== ""){
+        try{
+          await navigator.clipboard.writeText(AllOut)
+          DisplayCopyDia()
+        }
+        catch(error){
+          console.debug(error)
+          DisplayCopyDiaFail()
+        }
+      }
+      else{
+        DisplayCopyDiaNone()
+      }
+    }
+    //UpdateLog配列を読み、最後の更新ログをヘッダーに突っ込む関数。
+    function VersionRender(){
+      const Version = UpdateLog[UpdateLog.length - 1].ver
+      document.getElementById("Version").innerText = `v${Version}`
+    }
+    //コピー確認ダイアログを表示する関数
+    function DisplayCopyDia(){
+      document.getElementById("CopyDia").showModal()
+    }
+    //コピー確認ダイアログを閉じる関数
+    function CloseDialog(){
+      document.getElementById("CopyDia").close()
+    }
+    //コピー失敗を訴えるダイアログを表示する関数
+    function DisplayCopyDiaFail(){
+      document.getElementById("CopyDiaFail").showModal()
+    }
+    //コピー失敗を訴えるダイアログを閉じる関数
+    function CloseDialogFail(){
+      document.getElementById("CopyDiaFail").close()
+    }
+    //コピーするものが何もないことを訴えるダイアログを表示する関数
+    function DisplayCopyDiaNone(){
+      document.getElementById("CopyDiaNone").showModal()
+    }
+    //コピーするものが何もないことを訴えるダイアログを閉じる関数
+    function CloseDialogNone(){
+      document.getElementById("CopyDiaNone").close()
+    }
+    //サンプルテキスト置き換えを確認するダイアログを表示する関数
+    function DisplayInsSampleDia(){
+      document.getElementById("InsSampleDia").showModal()
+    }
+    //サンプルテキスト置き換えを確認するダイアログを閉じる関数
+    function CloseInsSampleDia(){
+      document.getElementById("InsSampleDia").close()
+    }
+    //サンプルテキスト置き換えを確認するダイアログを閉じ、実際にその動作を行う関数
+    function DoInsSampleDia(){
+      document.getElementById("InsSampleDia").close()
+      SampleInsrter()
+    }
+    //クリア確認表示
+    function DisplayClearDia(){
+      document.getElementById("ClearDia").showModal()
+    }
+    //クリア確認閉じる
+    function CloseClearDia(){
+      document.getElementById("ClearDia").close()
+    }
+    //クリア確認閉じて実行
+    function DoClearDia(){
+      document.getElementById("ClearDia").close()
+      AreaCleaner()
+    }
+    //エラーを訴える
+    function DisplayErrDia(){
+      document.getElementById("ErrDia").showModal()
+    }
+    //閉じる
+    function CloseErrDia(){
+      document.getElementById("ErrDia").close()
+    }
+    //入力が何もないことを訴える
+    function DisplayInputNoneDia(){
+      document.getElementById("InputNoneDia").showModal()
+    }
+    //閉じる
+    function CloseInputNoneDia(){
+      document.getElementById("InputNoneDia").close()
+    }
+
+    VersionRender()
+    document.getElementById("Do").addEventListener("click", Starter)//変形するボタンを押したときに、Starter(諸々の処理統括関数)を呼ぶ
+    document.getElementById("InsertSample").addEventListener("click", DisplayInsSampleDia)//サンプル置き換えを押したとき、確認ダイアログを表示
+    document.getElementById("Clean").addEventListener("click", DisplayClearDia)//クリアボタンを押したとき、確認を表示
+    document.getElementById("Copy").addEventListener("click", Cliper)//コピーを押したとき、確認を表示
+    document.getElementById("AllCopy").addEventListener("click", AllCliper)//全コピーを押したとき、確認を表示
+    document.getElementById("CopyDia1").addEventListener("click", CloseDialog)//コピー成功ダイアログの確認ボタンを押したときに消す関数
+    document.getElementById("CopyDia1Fail").addEventListener("click", CloseDialogFail)//失敗の確認ボタンを押したときに消す関数
+    document.getElementById("CopyDia1None").addEventListener("click", CloseDialogNone)//何もないときの確認ボタンを押したときに消す関数
+    document.getElementById("InsSampleDia1").addEventListener("click", DoInsSampleDia)//サンプル置き換え実行を押したときに消して実行
+    document.getElementById("InsSampleDia2").addEventListener("click", CloseInsSampleDia)//サンプル置き換えを拒否した時に消す関数
+    document.getElementById("ClearDia1").addEventListener("click", DoClearDia)//クリア実行を押したときに消して実行
+    document.getElementById("ClearDia2").addEventListener("click", CloseClearDia)//クリアキャンセルを押したときに消す
+    document.getElementById("ErrDia1").addEventListener("click", CloseErrDia)//エラーダイアログを確認したときに消す
+    document.getElementById("InputNoneDia1").addEventListener("click", CloseInputNoneDia)//入力何もなしを確認したときに消す
+  </script>
+</body>
+</html>
